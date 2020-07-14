@@ -18,6 +18,8 @@ def initialize(
     dashboard=True,
     dashboard_address=":8787",
     protocol=None,
+    comm = None,
+
 ):
     """
     Initialize a Dask cluster using mpi4py
@@ -49,8 +51,8 @@ def initialize(
         Worker's Bokeh port for visual diagnostics
     """
     from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
+    if comm == None:
+        comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     loop = IOLoop.current()
 
