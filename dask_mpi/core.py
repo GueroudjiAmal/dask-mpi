@@ -1,3 +1,15 @@
+"""
+By default it uses mpi4py to initialize a cluster considering :
+rank 0 as a scheduler 
+rank 1 as a client 
+rank > 1 as workers 
+
+I cosidered two clients rank 1 and 2 by changing the code directly 
+but we can automate the that by adding a parameter for adding more 
+clients 
+
+"""
+
 import asyncio
 import atexit
 import sys
@@ -9,6 +21,7 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 
 
+
 def initialize(
     interface=None,
     nthreads=1,
@@ -18,8 +31,7 @@ def initialize(
     dashboard=True,
     dashboard_address=":8787",
     protocol=None,
-    comm = None,
-
+    comm = None, 
 ):
     """
     Initialize a Dask cluster using mpi4py
@@ -49,13 +61,20 @@ def initialize(
         Prefix for the bokeh app
     bokeh_worker_port : int
         Worker's Bokeh port for visual diagnostics
+
+    ------------------------------------------------------------------------------    
+    comm : the MPI communicator to use, else the MPI.COMM_WORLD is used by default
+    ------------------------------------------------------------------------------
+
     """
     from mpi4py import MPI
-    if comm == None:
-        comm = MPI.COMM_WORLD
+
+    if comm == None: #defaut initialize()
+    	comm = MPI.COMM_WORLD
+
     rank = comm.Get_rank()
     loop = IOLoop.current()
-
+    
     if rank == 0:
 
         async def run_scheduler():
@@ -68,7 +87,9 @@ def initialize(
                 comm.Barrier()
                 await scheduler.finished()
 
+
         asyncio.get_event_loop().run_until_complete(run_scheduler())
+
         sys.exit()
 
     else:
@@ -76,11 +97,12 @@ def initialize(
         dask.config.set(scheduler_address=scheduler_address)
         comm.Barrier()
 
-    if rank == 1:
+    if rank == 1 or rank == 2: # Added another client 
         atexit.register(send_close_signal)
     else:
 
         async def run_worker():
+
             WorkerType = Nanny if nanny else Worker
             async with WorkerType(
                 interface=interface,
@@ -92,10 +114,10 @@ def initialize(
             ) as worker:
                 await worker.finished()
 
-        asyncio.get_event_loop().run_until_complete(run_worker())
+        asyncio.get_event_loop().run_until_complete(run_worker())    
         sys.exit()
 
-
+        
 def send_close_signal():
     async def stop(dask_scheduler):
         await dask_scheduler.close()
