@@ -98,7 +98,7 @@ def initialize(
         comm.Barrier()
 
     if rank == 1 or rank == 2 or rank == 3 : # Added another client 
-        if rank == 3:
+        if rank == 1:
             atexit.register(send_close_signal)
     else:
 
