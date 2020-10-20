@@ -97,10 +97,9 @@ def initialize(
         dask.config.set(scheduler_address=scheduler_address)
         comm.Barrier()
 
-    if rank == 1 or rank == 2 or rank == 3 : # Added another client 
-        if rank == 1:
-            atexit.register(send_close_signal)
-    else:
+    if rank == 1: # Added another client 
+        atexit.register(send_close_signal)
+    elif rank < 6:
 
         async def run_worker():
 
