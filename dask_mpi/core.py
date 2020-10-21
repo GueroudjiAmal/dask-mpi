@@ -2,17 +2,16 @@
 By default it uses mpi4py to initialize a cluster considering :
 rank 0 as a scheduler 
 rank 1 as a client 
-rank > 1 as workers 
-
-I cosidered two clients rank 1 and 2 by changing the code directly 
-but we can automate the that by adding a parameter for adding more 
-clients 
+1 < rank < size as workers 
+rank >= size are used by the simulation and publishing data as clients
 
 """
+
 
 import asyncio
 import atexit
 import sys
+import warnings
 
 import dask
 from dask.distributed import Client, Scheduler, Worker, Nanny
@@ -23,6 +22,7 @@ from tornado.ioloop import IOLoop
 
 
 def initialize(
+    size,
     interface=None,
     nthreads=1,
     local_directory="",
@@ -31,7 +31,8 @@ def initialize(
     dashboard=True,
     dashboard_address=":8787",
     protocol=None,
-    comm = None, 
+    comm = None,
+    
 ):
     """
     Initialize a Dask cluster using mpi4py
@@ -42,6 +43,8 @@ def initialize(
 
     Parameters
     ----------
+    size : int 
+        Number of processes to be used by Dask, should be greater or equal to 3 
     interface : str
         Network interface like 'eth0' or 'ib0'
     nthreads : int
@@ -61,17 +64,20 @@ def initialize(
         Prefix for the bokeh app
     bokeh_worker_port : int
         Worker's Bokeh port for visual diagnostics
+    comm : MIP_COMM
+        MPI communicator to use, else the MPI.COMM_WORLD is used by default
 
-    ------------------------------------------------------------------------------    
-    comm : the MPI communicator to use, else the MPI.COMM_WORLD is used by default
-    ------------------------------------------------------------------------------
 
     """
     from mpi4py import MPI
 
     if comm == None: #defaut initialize()
     	comm = MPI.COMM_WORLD
-
+    if size < 3 :
+        warnings.warn(
+            "The size should be greater or equal to three "
+        )
+	
     rank = comm.Get_rank()
     loop = IOLoop.current()
     
@@ -97,9 +103,10 @@ def initialize(
         dask.config.set(scheduler_address=scheduler_address)
         comm.Barrier()
 
-    if rank == 1: # Added another client 
+    if rank == 1: 
         atexit.register(send_close_signal)
-    elif rank < 6:
+        
+    elif rank < size:
 
         async def run_worker():
 
