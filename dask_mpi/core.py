@@ -14,7 +14,7 @@ import sys
 import warnings
 
 import dask
-from dask.distributed import Client, Scheduler, Worker, Nanny
+from dask.distributed import Client, Scheduler, Worker, Nanny, utils 
 
 from tornado import gen
 from tornado.ioloop import IOLoop
@@ -74,9 +74,9 @@ def initialize(
     if comm == None: #defaut initialize()
     	comm = MPI.COMM_WORLD
     if size < 3 :
-        warnings.warn(
-            "The size should be greater or equal to three "
-        )
+        raise TypeError(
+                "Size must be greater or equal to 3 "
+            )
 	
     rank = comm.Get_rank()
     loop = IOLoop.current()
